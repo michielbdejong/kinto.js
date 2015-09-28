@@ -21,16 +21,11 @@ describe("adapter.IDB", () => {
     afterEach(() => sandbox.restore());
 
     describe("#batch", () => {
-      var batch;
-      beforeEach(() => {
-        batch = db.batch();
-      });
-
       it("should resolve with the list of successful operations", () => {
-        return batch([
-          batch.create({id: 1, name: "foo"}),
-          batch.create({id: 2, name: "bar"}),
-        ])
+        return db.batch(batch => {
+          batch.create({id: 1, name: "foo"});
+          batch.create({id: 2, name: "bar"});
+        })
           .should.become({
             errors: [],
             operations: [
@@ -41,10 +36,10 @@ describe("adapter.IDB", () => {
       });
 
       it("should batch create records", () => {
-        return batch([
-          batch.create({id: 1, name: "foo"}),
-          batch.create({id: 2, name: "bar"}),
-        ])
+        return db.batch(batch => {
+          batch.create({id: 1, name: "foo"});
+          batch.create({id: 2, name: "bar"});
+        })
           .then(_ => db.list())
           .should.become([
             {id: 1, name: "foo"},
@@ -53,12 +48,12 @@ describe("adapter.IDB", () => {
       });
 
       it("should expose failing operation errors", () => {
-        return batch([
-          batch.create({id: 1, name: "foo"}),
-          batch.create({id: 2, name: "bar"}),
-          batch.create(1),
-          batch.create(2),
-        ])
+        return db.batch(batch => {
+          batch.create({id: 1, name: "foo"});
+          batch.create({id: 2, name: "bar"});
+          batch.create(1);
+          batch.create(2);
+        })
           .then(res => {
             expect(res.errors).to.have.length.of(2);
             expect(res.errors[0].error.name).eql("DataError");
@@ -68,25 +63,43 @@ describe("adapter.IDB", () => {
           });
       });
 
+      it("should allow performing a get operation within a batch", () => {
+        return db.create({id: 1, name: "foo"})
+          .then(_ => {
+            return db.batch(batch => {
+              batch.create({id: 2, name: "bar"});
+              return batch.get(1)
+                .then(res => expect(res).eql({id: 1, name: "foo"}));
+            });
+          })
+          .then(res => expect(res).eql({
+            errors: [],
+            operations: [{
+              type: "create",
+              data: {id: 2, name: "bar"}
+            }],
+          }));
+      });
+
       it("should not alter database on transaction error", () => {
         return db.create({id: 1, name: "foo"})
-          .then(_ => batch([
-            batch.create({id: 2, name: "bar"}),
-            batch.create({id: 3, name: "baz"}),
-            batch.create({id: 1, name: "foo-dupe"}), // dupe
-            batch.create({id: 4, name: "qux"}),
-          ]))
+          .then(_ => db.batch(batch => {
+            batch.create({id: 2, name: "bar"});
+            batch.create({id: 3, name: "baz"});
+            batch.create({id: 1, name: "foo-dupe"}); // dupe
+            batch.create({id: 4, name: "qux"});
+          }))
           .then(_ => db.list())
           .should.become([{id: 1, name: "foo"}]);
       });
 
       it("should perform different crud operations in order", () => {
         return db.create({id: 1, name: "foo"})
-          .then(_ => batch([
-            batch.delete(1),
-            batch.create({id: 2, name: "bar"}),
-            batch.update({id: 2, name: "baz"}),
-          ]))
+          .then(_ => db.batch(batch => {
+            batch.delete(1);
+            batch.create({id: 2, name: "bar"});
+            batch.update({id: 2, name: "baz"});
+          }))
           .then(_ => db.list())
           .should.become([{id: 2, name: "baz"}]);
       });
