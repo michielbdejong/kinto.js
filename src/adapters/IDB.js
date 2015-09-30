@@ -89,10 +89,11 @@ export default class IDB extends BaseAdapter {
   /**
    * Batch operations.
    *
-   * @param  {Function} fn The operation function, which must return a Promise.
+   * @param  {Function} operationsFn The operations function, which should
+   *                                 either return nothing or a Promise.
    * @return {Promise}
    */
-  batch(fn) {
+  batch(operationsFn) {
     return this.open().then(() => {
       const errors = [], operations = [];
       const {transaction, store} = this.prepare("readwrite");
@@ -115,9 +116,9 @@ export default class IDB extends BaseAdapter {
           return operation;
         };
       }
-      const result = fn(batchObject);
+      const result = operationsFn(batchObject);
       return Promise.resolve(result)
-        .then(result => {
+        .then(_ => { // XXX should we leverage retrieved result?
           return new Promise((resolve, reject) => {
             operations.forEach(operation => {
               const storeMethod = BATCH_STORE_METHODS[operation.type];
