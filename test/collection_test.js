@@ -46,7 +46,7 @@ describe("Collection", () => {
   }
 
   function createIntegerIdSchema() {
-    var _next = 0;
+    var _next = 1;
     return {
       generate() {
         return _next++;

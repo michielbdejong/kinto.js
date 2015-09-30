@@ -122,7 +122,7 @@ describe("adapter.IDB", () => {
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+              onerror({target: {error: new Error("transaction error")}});
             }
           }
         });
@@ -144,7 +144,7 @@ describe("adapter.IDB", () => {
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+              onerror({target: {error: new Error("transaction error")}});
             }
           }
         });
@@ -176,15 +176,15 @@ describe("adapter.IDB", () => {
 
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {get() {}},
+          store: {delete() {}},
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+              onerror({target: {error: new Error("transaction error")}});
             }
           }
         });
-        return db.get(42)
+        return db.delete(42)
           .should.be.rejectedWith(Error, "transaction error");
       });
 
