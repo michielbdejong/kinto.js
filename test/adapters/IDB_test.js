@@ -26,8 +26,14 @@ describe("adapter.IDB", () => {
           return db.batch(batch => {
             batch.create({id: 1, name: "foo"});
             batch.create({id: 2, name: "bar"});
+            return Promise.resolve(42);
           });
         }
+
+        it("should resolve with the batch function result", () => {
+          return successfulBatch()
+            .should.eventually.have.property("result").eql(42);
+        });
 
         it("should resolve with the list of successful operations", () => {
           return successfulBatch()
@@ -105,6 +111,7 @@ describe("adapter.IDB", () => {
               });
             })
             .then(res => expect(res).eql({
+              result: undefined,
               errors: [],
               operations: [{
                 type: "update",
