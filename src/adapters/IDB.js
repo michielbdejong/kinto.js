@@ -21,7 +21,7 @@ export default class IDB extends BaseAdapter {
 
   _handleError(method) {
     return err => {
-      const error = new Error(method + "() " + err.message);
+      const error = new Error(method + "() " + (err.message));
       error.stack = err.stack;
       throw error;
     };
@@ -212,7 +212,7 @@ export default class IDB extends BaseAdapter {
     return this.batch(batch => batch.get(id).then(record => _record = record))
       .then(res => {
         if (res.errors.length > 0) {
-          throw res.errors[0].error;
+          throw res.errors[0];
         }
         return _record;
       })
