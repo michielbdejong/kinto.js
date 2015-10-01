@@ -120,6 +120,32 @@ describe("adapter.IDB", () => {
             }));
         });
       });
+
+      describe("#batch.list", () => {
+        const records = [
+          {id: 1, name: "foo"},
+          {id: 2, name: "bar"},
+        ];
+
+        beforeEach(() => {
+          return Promise.all(records.map(record => db.create(record)));
+        });
+
+        it("should not raise any error", () => {
+          return db.batch(batch => batch.list())
+            .should.eventually.have.property("errors").eql([]);
+        });
+
+        it("should not list list operations", () => {
+          return db.batch(batch => batch.list())
+            .should.eventually.have.property("operations").eql([]);
+        });
+
+        it("should allow listing records from within a batch", () => {
+          return db.batch(batch => batch.list())
+            .should.eventually.have.property("result").eql(records);
+        });
+      });
     });
 
     describe("#create", () => {
@@ -226,15 +252,18 @@ describe("adapter.IDB", () => {
 
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {openCursor() {return {};}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+          store: {
+            openCursor() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
           }
         });
-        return db.list({})
+        return db.list()
           .should.be.rejectedWith(Error, "transaction error");
       });
     });
