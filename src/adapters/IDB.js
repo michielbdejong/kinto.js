@@ -21,7 +21,7 @@ export default class IDB extends BaseAdapter {
 
   _handleError(method) {
     return err => {
-      const error = new Error(method + "() " + (err.message));
+      const error = new Error(method + "() " + err.message);
       error.stack = err.stack;
       throw error;
     };
