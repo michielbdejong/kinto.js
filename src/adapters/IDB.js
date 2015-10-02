@@ -85,15 +85,19 @@ class Batch {
     });
   }
 
+  _schedule(type, data) {
+    const operation = {type, data};
+    this._operations.push(operation);
+    return operation;
+  }
+
   /**
    * Clears the current store.
    *
    * @return {Object} An object describing the operation.
    */
   clear() {
-    const operation = {type: "clear", data: undefined};
-    this._operations.push(operation);
-    return operation;
+    return this._schedule("clear");
   }
 
   /**
@@ -102,9 +106,7 @@ class Batch {
    * @return {Object} An object describing the operation.
    */
   create(data) {
-    const operation = {type: "create", data};
-    this._operations.push(operation);
-    return operation;
+    return this._schedule("create", data);
   }
 
   /**
@@ -113,9 +115,7 @@ class Batch {
    * @return {Object} An object describing the operation.
    */
   update(data) {
-    const operation = {type: "update", data};
-    this._operations.push(operation);
-    return operation;
+    return this._schedule("update", data);
   }
 
   /**
@@ -124,9 +124,7 @@ class Batch {
    * @return {Object} An object describing the operation.
    */
   delete(data) {
-    const operation = {type: "delete", data};
-    this._operations.push(operation);
-    return operation;
+    return this._schedule("delete", data);
   }
 
   /**
