@@ -199,6 +199,16 @@ export default class Collection {
   }
 
   /**
+   * Performs batch operations on the collection.
+   *
+   * @param  {Function} batchFn the batch function.
+   * @return {Promise}
+   */
+  batch(batchFn) {
+    return this.db.batch(batchFn);
+  }
+
+  /**
    * Encodes a record.
    *
    * @param  {String} type   Either "remote" or "local".
@@ -468,7 +478,7 @@ export default class Collection {
   importChanges(syncResultObject, changeObject) {
     const conflicts = [], skipped = [];
     // Ensure all imports are done within a single transaction
-    return this.db.batch(batch => {
+    return this.batch(batch => {
       return Promise.all(changeObject.changes.map(change => {
         return this._importChange(batch, change).then(importResult => {
           if (importResult.type === "conflicts") {
@@ -582,7 +592,7 @@ export default class Collection {
     return this.gatherLocalChanges()
       .then(localChanges => {
         // Delete never synced records marked for deletion
-        return this.db.batch(batch => {
+        return this.batch(batch => {
           for (let record of localChanges.toDelete) {
             batch.delete(record.id);
           }
@@ -604,7 +614,7 @@ export default class Collection {
       })
       // Batch perform required local updates
       .then(published => {
-        return this.db.batch(batch => {
+        return this.batch(batch => {
           for (let record of published) {
             if (record.deleted) {
               // Remote deletion to reflect locally
@@ -641,7 +651,7 @@ export default class Collection {
         } else if (options.strategy === Collection.strategy.SERVER_WINS) {
           // If records have been automatically resolved according to strategy and
           // are in non-synced status, mark them as synced.
-          return this.db.batch(batch => {
+          return this.batch(batch => {
             for (let record of resolvedUnsynced) {
               batch.update(markSynced(record));
             }
@@ -676,7 +686,7 @@ export default class Collection {
     if (strategy === Collection.strategy.MANUAL || result.conflicts.length === 0) {
       return Promise.resolve(result);
     }
-    return this.db.batch(batch => {
+    return this.batch(batch => {
       return Promise.all(result.conflicts.map(conflict => {
         const resolution = strategy === Collection.strategy.CLIENT_WINS ?
                            conflict.local : conflict.remote;
