@@ -57,7 +57,7 @@ class Batch {
     }
     return new Promise((resolve, reject) => {
       const request = this._store.get(id);
-      request.onerror = event => reject(new Error(event.target.error));
+      request.onerror = event => reject(event.target.error);
       request.onsuccess = () => resolve(request.result);
     });
   }
@@ -72,7 +72,7 @@ class Batch {
     return new Promise((resolve, reject) => {
       const results = [];
       const request = this._store.openCursor();
-      request.onerror = event => reject(new Error(event.target.error));
+      request.onerror = event => reject(event.target.error);
       request.onsuccess = function(event) {
         var cursor = event.target.result;
         if (cursor) {
@@ -98,18 +98,16 @@ class Batch {
     return new Promise((resolve, reject) => {
       const storeMethod = Batch.BATCH_STORE_METHODS[type];
       try {
-        const req = this._store[storeMethod](data);
-        req.onerror = event => {
-          this._errors.push({
-            type: "error",
-            error: event.target.error,
-            operation
-          });
+        const request = this._store[storeMethod](data);
+        request.onerror = event => {
+          this._errors.push(event.target.error);
           reject(event.target.error);
         };
-        req.onsuccess = event => resolve(operation);
-      } catch(error) {
-        this._errors.push({type: "error", error, operation});
+        request.onsuccess = event => resolve(operation);
+      } catch (err) {
+        err.operation = operation;
+        this._errors.push(err);
+        reject(event.target.err);
       }
     });
   }
@@ -177,11 +175,14 @@ class Batch {
           this._transaction.oncomplete = () => _resolve(result);
         });
       })
-      .catch(err => ({
-        result: undefined,
-        operations: this._operations,
-        errors: this._errors.concat(err),
-      }));
+      .catch(err => {
+        console.log(err);
+        return {
+          result: undefined,
+          operations: this._operations,
+          errors: this._errors.concat(err),
+        };
+      });
   }
 }
 
@@ -195,7 +196,7 @@ export default class IDB extends BaseAdapter {
 
   _handleError(method) {
     return err => {
-      const error = new Error(method + "() " + err.message);
+      const error = new Error(method + "() " + err);
       error.stack = err.stack;
       throw error;
     };
@@ -284,7 +285,7 @@ export default class IDB extends BaseAdapter {
     return this.batch(batch => batch.clear())
       .then(res => {
         if (res.errors.length > 0) {
-          throw res.errors[0].error;
+          throw res.errors[0];
         }
       })
       .catch(this._handleError("clear"));
@@ -302,7 +303,7 @@ export default class IDB extends BaseAdapter {
     return this.batch(batch => batch.create(record))
       .then(res => {
         if (res.errors.length > 0) {
-          throw res.errors[0].error;
+          throw res.errors[0];
         }
         return res.result.data;
       })
@@ -319,7 +320,7 @@ export default class IDB extends BaseAdapter {
     return this.batch(batch => batch.update(record))
       .then(res => {
         if (res.errors.length > 0) {
-          throw res.errors[0].error;
+          throw res.errors[0];
         }
         return res.result.data;
       })
@@ -353,7 +354,7 @@ export default class IDB extends BaseAdapter {
     return this.batch(batch => batch.delete(id))
       .then(res => {
         if (res.errors.length > 0) {
-          throw res.errors[0].error;
+          throw res.errors[0];
         }
         return res.result.data;
       })
