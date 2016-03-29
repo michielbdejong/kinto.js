@@ -122,4 +122,11 @@ function main() {
   render();
 }
 
+function connect(platform, host, user, pass) {
+  // only platform supported so far is 'remotestorage'
+  // Ludbud.oauth(platform, user+'@'+host);
+  Ludbud.oauth('remotestorage', 'michiel@5apps.com');
+}
+
 window.addEventListener("DOMContentLoaded", main);
+document.getElementById("connect-button").addEventListener("click", connect);

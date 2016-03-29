@@ -1,4 +1,37 @@
 insertLudbud = function() {
+  function getUserDataCredentials(callback) {
+    var harvest = Ludbud.fromWindowLocation();
+    if (harvest) {
+      console.log('setting harvest into localforage, then reloading page', harvest);
+      localforage.setItem('userDataCredentials', harvest, function(err) {
+        Ludbud.restoreWindowLocation();
+        //now the page will be reloaded, after which harvest will be undefined
+      });
+    } else {
+      localforage.getItem('userDataCredentials', callback);
+    }
+  }
+
+  function go(err, userDataCredentials) {
+    if (err) {
+      console.log('error getting user data credentials', err);
+    } else if (userDataCredentials) {
+      ludbud = new Ludbud(userDataCredentials);
+      console.log('now we can use the ludbud object to access the user\'s data');
+    } else {
+      console.log('No user data credentials yet. Please click one of the buttons');
+    }
+  }
+  function reset() {
+    localforage.clear(function() {
+      window.location = window.location.href;
+    });
+  }
+
+  //... on page load:
+  var ludbud;
+  getUserDataCredentials(go);
+
   return {
     bucket(bucketName) {
       console.log('creating bucket', bucketName);
