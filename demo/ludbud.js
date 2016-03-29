@@ -252,19 +252,19 @@ ret.oauth = function(platform, userAddress, scopes) {
         undefined, function(err, data) {
       if (err) {
         fail('error retrieving webfinger for '+userAddress, err);
-      } else if (typeof data === 'object' && Array.isArray(data.links)) {
-        for (var i=0; i< data.links.length; i++) {
-          if (typeof data.links[i] === 'object'
-              && data.links[i].rel === 'remotestorage'
-              && typeof data.links[i].properties === 'object'
-              && typeof data.links[i].properties['http://tools.ietf.org/html/rfc6749#section-4.2'] === 'string') {
-            apiBaseURL = data.links[i].href;
-            goTo(data.links[i].properties['http://tools.ietf.org/html/rfc6749#section-4.2']);
+      } else if (typeof data.body === 'object' && Array.isArray(data.body.links)) {
+        for (var i=0; i< data.body.links.length; i++) {
+          if (typeof data.body.links[i] === 'object'
+              && data.body.links[i].rel === 'remotestorage'
+              && typeof data.body.links[i].properties === 'object'
+              && typeof data.body.links[i].properties['http://tools.ietf.org/html/rfc6749#section-4.2'] === 'string') {
+            apiBaseURL = data.body.links[i].href;
+            goTo(data.body.links[i].properties['http://tools.ietf.org/html/rfc6749#section-4.2']);
             return;
           }
         }
       } else {
-        fail('error parsing webfinger for '+userAddress + JSON.stringify(data));
+        fail('error parsing webfinger for '+userAddress + JSON.stringify(data.body));
       }
     });
   } else {

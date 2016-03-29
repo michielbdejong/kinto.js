@@ -32,6 +32,10 @@ insertLudbud = function() {
     return '/storage-sync/localhost:8080/' + key;
   }
 
+  function removeQuotes(str) {
+    return str.replace(/"/g, '');
+  }
+
   //... on page load:
   getUserDataCredentials(go);
 
@@ -98,7 +102,7 @@ insertLudbud = function() {
                             str += String.fromCharCode(buf[i]);
                           }
                           let record = JSON.parse(str);
-                          record.last_modified = data2.info.ETag;
+                          record.last_modified = removeQuotes(data2.info.ETag);
                           records.push(record);
                           resolve2('Fetched data for ' + key);
                         }
@@ -162,7 +166,7 @@ insertLudbud = function() {
                   console.log('updating record', r);
                   promises.push(new Promise((resolve, reject) => {
                     window.ludbud.update(keyToPath(r.id), JSON.stringify(r), 'application/json',
-                      undefined,
+                      r.last_modified,
                       function(err, data) {
                         console.log(err, data);
                         if (err) {
@@ -177,8 +181,8 @@ insertLudbud = function() {
                 deleteRecord(r) {
                   console.log('deleting record', r);
                   promises.push(new Promise((resolve, reject) => {
-                    window.ludbud.delete(keyToPath(r.id),
-                      undefined,
+                    window.ludbud.remove(keyToPath(r.id),
+                      r.last_modified,
                       function(err, data) {
                         console.log(err, data);
                         if (err) {

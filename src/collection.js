@@ -123,6 +123,7 @@ function markSynced(record) {
  */
 function importChange(transaction, remote) {
   const local = transaction.get(remote.id);
+  console.log('importChange!', local, remote);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
     // avoid recreation.
@@ -140,6 +141,7 @@ function importChange(transaction, remote) {
       return {type: "skipped", data: local};
     }
     if (identical) {
+      console.log('bumping');
       // If records are identical, import anyway, so we bump the
       // local last_modified value from the server and set record
       // status to "synced".
@@ -147,6 +149,7 @@ function importChange(transaction, remote) {
       transaction.update(synced);
       return {type: "updated", data: synced, previous: local};
     }
+    console.log('conflicting');
     return {
       type: "conflicts",
       data: {type: "incoming", local: local, remote: remote}
@@ -944,7 +947,7 @@ export default class Collection {
       .then(_ => this.pullChanges(result, options))
       .then(result => {
         console.log('pullChanges gave', result);
-        return this.pushChanges(result, options));
+        return this.pushChanges(result, options);
       })
       .then(result => {
         console.log('pushChanges gave', result);
