@@ -79,9 +79,7 @@ function requestJSON(url, token, callback) {
   if (token) {
     headers.Authorization =  'Bearer '+token;
   }
-  return request('GET', url, 'json', undefined, headers, function(err, data) {
-    return callback(err, (typeof data === 'object' ? data.body : data));
-  });
+  return request('GET', url, 'json', undefined, headers, callback);
 }
 function requestArrayBuffer(method, url, token, payload, headers, callback) {
   if (token) {
@@ -154,7 +152,8 @@ ret.prototype.getFolder = function(dataPath, callback) {
       if (err) {
         callback(err);
       } else {
-        callback(err, data.items);
+        console.log('getFolder data', data);
+        callback(err, { etag: data.info.ETag, items: data.body.items });
       }
     });
   } else {

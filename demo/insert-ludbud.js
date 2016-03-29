@@ -16,7 +16,7 @@ insertLudbud = function() {
     if (err) {
       console.log('error getting user data credentials', err);
     } else if (userDataCredentials) {
-      ludbud = new Ludbud(userDataCredentials);
+      window.ludbud = new Ludbud(userDataCredentials);
       console.log('now we can use the ludbud object to access the user\'s data');
     } else {
       console.log('No user data credentials yet. Please click one of the buttons');
@@ -28,8 +28,11 @@ insertLudbud = function() {
     });
   }
 
+  function keyToPath(key) {
+    return '/storage-sync/localhost:8080/' + key;
+  }
+
   //... on page load:
-  var ludbud;
   getUserDataCredentials(go);
 
   return {
@@ -75,7 +78,43 @@ insertLudbud = function() {
 
             listRecords: (options) => {
               console.log('listing records', options);
-              return Promise.resolve({data: [], last_modified: '"0"'});
+              return new Promise((resolve, reject) => {
+                ludbud.getFolder('/storage-sync/localhost:8080/', function(err, data) {
+                  console.log(err, data);
+                  let records = [];
+                  let promises = [];
+
+                  for (key in data.items) {
+                    promises.push(new Promise((resolve2, reject2) => {
+                      ludbud.getDocument('/storage-sync/localhost:8080/'+key, function(err2, data2) {
+                        if (err2) {
+                          console.log('got error', err2);
+                          reject2(err2);
+                        } else {
+                          console.log('fetched', err2, data2);
+                          var str = "";
+                          var buf = new Uint8Array(data2.body);
+                          for (var i = 0; i < buf.byteLength; i++) {
+                            str += String.fromCharCode(buf[i]);
+                          }
+                          let record = JSON.parse(str);
+                          record.last_modified = data2.info.ETag;
+                          records.push(record);
+                          resolve2('Fetched data for ' + key);
+                        }
+                      });
+                    }));
+                  }
+                  console.log('running promises');
+                  Promise.all(promises).then(promiseResults => {
+                    console.log('done', promiseResults, records);
+                    resolve({data: records, last_modified: data.etag});
+                  }).catch(e => {
+                    console.error('promises error', e);
+                    reject(e);
+                  });
+                });
+              });
             },
 
             /**
@@ -89,20 +128,8 @@ insertLudbud = function() {
              * @return {Promise<Object, Error>}
              */
             batch: (fn, options) => {
-              console.log('executing batch', fn, options);
-              fn({
-                createRecord(r) {
-                  console.log('creating record', r);
-                },
-                updateRecord(r) {
-                  console.log('updating record', r);
-                },
-                deleteRecord(r) {
-                  console.log('deleting record', r);
-                },
-              });
-              console.log('executed');
-              return Promise.resolve({
+              let promises = [];
+              let results = {
                 ok:           true,
                 lastModified: null,
                 errors:       [],
@@ -113,6 +140,61 @@ insertLudbud = function() {
                 conflicts:    [],
                 skipped:      [],
                 resolved:     [],
+              };
+              console.log('executing batch', fn, options);
+              fn({
+                createRecord(r) {
+                  console.log('creating record', r);
+                  promises.push(new Promise((resolve, reject) => {
+                    window.ludbud.create(keyToPath(r.id), JSON.stringify(r), 'application/json',
+                      function(err, data) {
+                        console.log(err, data);
+                        if (err) {
+                          reject(err);
+                        } else {
+                          results.created.push(r);
+                          resolve(data);
+                        }
+                      });
+                  }));
+                },
+                updateRecord(r) {
+                  console.log('updating record', r);
+                  promises.push(new Promise((resolve, reject) => {
+                    window.ludbud.update(keyToPath(r.id), JSON.stringify(r), 'application/json',
+                      undefined,
+                      function(err, data) {
+                        console.log(err, data);
+                        if (err) {
+                          reject(err);
+                        } else {
+                          results.updated.push(r);
+                          resolve(data);
+                        }
+                      });
+                  }));
+                },
+                deleteRecord(r) {
+                  console.log('deleting record', r);
+                  promises.push(new Promise((resolve, reject) => {
+                    window.ludbud.delete(keyToPath(r.id),
+                      undefined,
+                      function(err, data) {
+                        console.log(err, data);
+                        if (err) {
+                          reject(err);
+                        } else {
+                          results.deleted.push(r);
+                          resolve(data);
+                        }
+                      });
+                  }));
+                },
+              });
+              console.log('executed');
+              return Promise.all(promises).then(promiseResults => {
+                console.log('batch results', promiseResults, results);
+                return results;
               });
             },
           };

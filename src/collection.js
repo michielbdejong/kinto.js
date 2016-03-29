@@ -721,23 +721,17 @@ export default class Collection {
       headers: options.headers
     })
     .then(({data, last_modified}) => {
-      // last_modified is the ETag header value (string).
-      // For retro-compatibility with first kinto.js versions
-      // parse it to integer.
-      const unquoted = last_modified ?
-        parseInt(last_modified.replace(/"/g, ""), 10) : undefined;
-
       // Check if server was flushed.
       // This is relevant for the Kinto demo server
       // (and thus for many new comers).
       const localSynced = options.lastModified;
-      const serverChanged = unquoted > options.lastModified;
+      const serverChanged = (last_modified !== options.lastModified);
       const emptyCollection = data.length === 0;
       if (localSynced && serverChanged && emptyCollection) {
         throw Error("Server has been flushed.");
       }
 
-      const payload = {changes: {lastModified: unquoted, changes: data}};
+      const payload = {changes: {lastModified: last_modified, changes: data}};
       // XXX would be better to directly pass the changes here
       return this.applyHook("incoming-changes", payload);
     })
@@ -948,8 +942,12 @@ export default class Collection {
     const syncPromise = this.db.getLastModified()
       .then(lastModified => this._lastModified = lastModified)
       .then(_ => this.pullChanges(result, options))
-      .then(result => this.pushChanges(result, options))
       .then(result => {
+        console.log('pullChanges gave', result);
+        return this.pushChanges(result, options));
+      })
+      .then(result => {
+        console.log('pushChanges gave', result);
         // Avoid performing a last pull if nothing has been published.
         if (result.published.length === 0) {
           return result;
