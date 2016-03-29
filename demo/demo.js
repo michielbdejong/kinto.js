@@ -1,5 +1,6 @@
 function main() {
   var db = new Kinto();
+  db._api = insertLudbud();
   var tasks = db.collection("tasks");
   var syncOptions = {
     remote: "https://kinto.dev.mozaws.net/v1/",
