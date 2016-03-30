@@ -121,8 +121,35 @@ function markSynced(record) {
  * @param  {Object}              remote      The remote change object to import.
  * @return {Object}
  */
+
+// when publishing a record, it should locally get the last_modified and _status: 'synced'
+// then it is at rest.
+
+// add a new rule: if remote last_modified did not change, skip the import.
+//
+// 1) local not found
+// 1a) and remote deleted -> skipped
+// 1b) and remote exists -> created
+// 2) locally changed
+// 2a) locally deleted -> skipped
+// 2b) identically changed -> bump
+// 2c) differently changed -> conflict
+// 3) local at rest
+// 3a) incoming deletion -> deleted
+// 3b) incoming update -> updated
+
+
 function importChange(transaction, remote) {
+  console.log('importChange', remote);
+
   const local = transaction.get(remote.id);
+  console.log('local found', local);
+  const changedRemotely = ((typeof local !== 'object') ||
+      (local.last_modified !== remote.last_modified));
+  console.log('importChange', local, remote, changedRemotely);
+  if (!changedRemotely) {
+    return {type: "void", data: remote};
+  }
   console.log('importChange!', local, remote);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
@@ -135,6 +162,7 @@ function importChange(transaction, remote) {
     return {type: "created", data: synced};
   }
   const identical = deepEquals(cleanRecord(local), cleanRecord(remote));
+  console.log('?', identical, local.last_modified, remote.last_modified);
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
@@ -585,6 +613,7 @@ export default class Collection {
    * @return {Promise}
    */
   importChanges(syncResultObject, changeObject) {
+    console.log('importChanges', syncResultObject, changeObject);
     return Promise.all(changeObject.changes.map(change => {
       if (change.deleted) {
         return Promise.resolve(change);
@@ -592,6 +621,7 @@ export default class Collection {
       return this._decodeRecord("remote", change);
     }))
       .then(decodedChanges => {
+        console.log('decodedChanges', decodedChanges);
         // No change, nothing to import.
         if (decodedChanges.length === 0) {
           return Promise.resolve(syncResultObject);
@@ -610,6 +640,7 @@ export default class Collection {
             }, {preload: existingRecords});
           })
           .catch(err => {
+            console.log('Caught import error!', err);
             // XXX todo
             err.type = "incoming";
             // XXX one error of the whole transaction instead of per atomic op
@@ -735,6 +766,7 @@ export default class Collection {
       }
 
       const payload = {changes: {lastModified: last_modified, changes: data}};
+      console.log('got payload', payload, data, last_modified);
       // XXX would be better to directly pass the changes here
       return this.applyHook("incoming-changes", payload);
     })

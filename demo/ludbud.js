@@ -174,14 +174,14 @@ ret.prototype.update = function(dataPath, content, contentType, existingETag, ca
   }
   requestArrayBuffer('PUT', this.makeURL(dataPath), this.token, content, {
      'Content-Type': contentType,
-     'If-Match': existingETag
+     'If-Match': '"' + existingETag + '"'
   }, function(err, data) {
     callback(err, (data && data.info ? data.info.ETag : undefined));
   });
 };
 ret.prototype.remove = function(dataPath, existingETag, callback) {
   requestArrayBuffer('DELETE', this.makeURL(dataPath), this.token, undefined, {
-     'If-Match': existingETag
+     'If-Match': '"' + existingETag + '"'
   }, callback);
 };
 var platformCredentials = {};
